@@ -17,13 +17,12 @@
 
 package io.github.ningyu.jmeter.plugin.dubbo.sample;
 
-import com.alibaba.dubbo.common.URL;
-import com.alibaba.dubbo.config.ReferenceConfig;
-import com.alibaba.dubbo.config.RegistryConfig;
-import com.alibaba.dubbo.config.utils.ReferenceConfigCache;
-import com.alibaba.dubbo.registry.RegistryService;
-
 import io.github.ningyu.jmeter.plugin.util.Constants;
+import org.apache.dubbo.common.URL;
+import org.apache.dubbo.config.ReferenceConfig;
+import org.apache.dubbo.config.RegistryConfig;
+import org.apache.dubbo.config.utils.ReferenceConfigCache;
+import org.apache.dubbo.registry.RegistryService;
 import org.apache.jorphan.logging.LoggingManager;
 import org.apache.log.Logger;
 
@@ -60,12 +59,12 @@ public class ProviderService implements Serializable {
     }
 
     public List<String> getProviders(String protocol, String address, String group) throws RuntimeException {
-        if (protocol.equals("zookeeper") || protocol.equals("redis")){
+        if (protocol.equals("zookeeper") || protocol.equals("nacos") || protocol.equals("redis")){
             return executeRegistry(protocol, address, group);
 //        } else if (protocol.equals("none")) {
 //            return executeTelnet();
         } else {
-            throw new RuntimeException("Registry Protocol please use zookeeper or redis!");
+            throw new RuntimeException("Registry Protocol please use zookeeper or nacos or redis!");
         }
     }
 
@@ -86,6 +85,13 @@ public class ProviderService implements Serializable {
                 registry.setAddress(address);
                 reference.setRegistry(registry);
                 break;
+            case Constants.REGISTRY_NACOS:
+                registry = new RegistryConfig();
+                registry.setProtocol(Constants.REGISTRY_NACOS);
+                registry.setGroup(group);
+                registry.setAddress(address);
+                reference.setRegistry(registry);
+                break;
             case Constants.REGISTRY_REDIS:
                 registry = new RegistryConfig();
                 registry.setProtocol(Constants.REGISTRY_REDIS);
@@ -94,13 +100,9 @@ public class ProviderService implements Serializable {
                 reference.setRegistry(registry);
                 break;
         }
-        reference.setInterface("com.alibaba.dubbo.registry.RegistryService");
+        reference.setInterface("org.apache.dubbo.registry.RegistryService");
         try {
-            ReferenceConfigCache cache = ReferenceConfigCache.getCache(address + "_" + group, new ReferenceConfigCache.KeyGenerator() {
-                public String generateKey(ReferenceConfig<?> referenceConfig) {
-                    return referenceConfig.toString();
-                }
-            });
+            ReferenceConfigCache cache = ReferenceConfigCache.getCache(address + "_" + group);
             RegistryService registryService = (RegistryService) cache.get(reference);
             if (registryService == null) {
                 throw new RuntimeException("Can't get the interface list, please check if the address is wrong!");
